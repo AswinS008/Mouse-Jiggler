@@ -5,3 +5,6 @@ index = paypal_ist_switch_prod (host=vlppauepwso201 OR host=vlppauepwso202 OR ho
 | eval diff_carbon=end - start, diff_pos=end_pos - start_pos, time_taken = diff_carbon - diff_pos
 | stats avg(time_taken) as avg_response_time, sum(success_count) as success_count, sum(failure_count) as failure_count by date_mday
 | fields avg_response_time success_count failure_count date_mday
+
+
+Error in 'stats' command: The output field 'date_mday' cannot have the same name as a group-by field.
