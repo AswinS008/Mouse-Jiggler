@@ -1,34 +1,33 @@
-def modify_splunk_query(query, start_time, end_time):
-    # Convert multiline string to single line by replacing newlines with spaces
-    single_line_query = query.replace("\n", " ").replace("\r", " ")
-    
-    # Replace each single backslash with double backslashes
-    modified_query = single_line_query.replace("\\", "\\\\")
-    
-    # The string to insert
-    insert_str = f"earliest={start_time} Latest={end_time} "
-    
-    # Find the index of the first occurrence of "|"
-    pipe_index = modified_query.find("|")
-    
-    # If there is a "|" in the string, insert the insert_str before it
-    if pipe_index != -1:
-        modified_query = modified_query[:pipe_index] + insert_str + modified_query[pipe_index:]
-    
-    return modified_query
+import requests
+from requests.auth import HTTPBasicAuth
 
-# Define start_time and end_time
-start_time = "2023-01-01T00:00:00"
-end_time = "2023-01-01T23:59:59"
+# Define your Splunk server URL and authentication details
+splunk_server = 'https://your_splunk_server:8089'
+username = 'your_username'
+password = 'your_password'
+# Alternatively, if you have a token:
+# token = 'Splunk your_splunk_token'
 
-# Read input from the user until newline is encountered
-print("Enter your Splunk query (press Enter to start processing):")
-user_input = ""
-while True:
-    line = input()
-    if line.strip() == "":
-        break
-    user_input += line + "\n"
+# Define the new time zone
+new_time_zone = 'UTC'
 
-# Modify the Splunk query
-final_query = modify_splunk_query(user_input.strip(), start_time, end_time)
+# Create the payload for the API request
+payload = {
+    'uiTimezone': new_time_zone
+}
+
+# Define the endpoint for updating user settings
+endpoint = f'{splunk_server}/servicesNS/-/-/authentication/users/{username}'
+
+# Make the request to change the time zone
+# Using HTTPBasicAuth for username and password
+response = requests.post(endpoint, data=payload, auth=HTTPBasicAuth(username, password))
+# Alternatively, if you use a token for authentication:
+# headers = {'Authorization': f'Bearer {token}'}
+# response = requests.post(endpoint, data=payload, headers=headers)
+
+# Check the response
+if response.status_code == 200:
+    print(f"Time zone changed successfully to {new_time_zone}.")
+else:
+    print(f"Failed to change time zone. Status code: {response.status_code}, Response: {response.text}")
