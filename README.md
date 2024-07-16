@@ -1,3 +1,14 @@
+index=chevron_ist_switch_prod host="vlcvusepistsl70*" sourcetype=prod_chevron_ist_cmmt* ("connected at" OR "disconnected at")
+| rex field=_raw ".(?<date_time>\d+\.\d+\.\d+\s\d+:\d+:\d+)"  # Extract date_time
+| rex field=_raw ".Port<(?<port_name>\S+)>"  # Extract port_name
+| eval event_type=if(match(_raw, "connected at"), "connected", "disconnected")  # Determine event type
+| eventstats first(date_time) as first_time last(date_time) as last_time by event_type  # Find first and last event times
+| table event_type, first_time, last_time, date_time, _raw
+| rename COMMENT as "Filtering to show specific outputs:"
+| search event_type="connected" OR event_type="disconnected"
+
+
+
 index=chevron_ist_switch_prod host="vlcvusepistsl70*" sourcetype=prod_chevron_ist_cmmt* ("disconnected at" OR "connected at")
 | rex field=_raw "(?<event_type>disconnected at|connected at)" 
 | rex field=_raw ".(?<date_time>\d+\.\d+\.\d+\s\d+:\d+:\d+)"
