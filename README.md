@@ -14,3 +14,17 @@ index=chevron_ist_switch_prod host ="vlcvusepistsl70*" sourcetype=prod_chevron_i
 | eval Connection = if(match(_raw, ": disconnected at"),"Disconnected", if(match(_raw,"connected at"),"Connected",""))
 | table event_type, date_time, Connection, port_name, _raw
 | sort date_time
+
+
+index=chevron_ist_switch_prod host="vlcvusepistsl70*" sourcetype=prod_chevron_ist_cmmt* ": disconnected at " OR "connected at"
+| rex field=_raw ".(?<date_time>\d{4}\.\d{2}\.\d{2}\s\d{2}:\d{2}:\d{2})"
+| rex field=_raw "Channel\s#(?<channel_id>\d+)"
+| rex field=_raw "Port\<(?<port_name>\S+)\>"
+| eval event_type = if(match(_raw, ": disconnected at"), "Disconnected", if(match(_raw, "connected at"), "Connected", ""))
+| table date_time, event_type, port_name, _raw
+| sort date_time
+| streamstats earliest(date_time) as start_time, latest(date_time) as end_time by event_type
+| where event_type == "Disconnected" OR event_type == "Connected"
+| eval event_type = if(event_type == "Disconnected" AND date_time == start_time, "Issue START time", if(event_type == "Connected" AND date_time == end_time, "Issue END time", ""))
+| table event_type, date_time, port_name, _raw
+
