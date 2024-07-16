@@ -1,30 +1,12 @@
-event_type	date_time	Connection	port_name	_raw
-Issue START time	024.07.14 20:12:59	Disconnected	ChasePNS	2024.07.14 20:12:59 [cmmt:1654127:3674199808]Channel #00020 Link<SSL> Port<ChasePNS> Server<Balancer>: disconnected at <10.18.94.157:43138> from <206.253.180.141:15350>
-Issue START time	024.07.14 20:13:00	Disconnected	ChasePNS	2024.07.14 20:13:00 [cmmt:1723266:2273306368]Channel #00020 Link<SSL> Port<ChasePNS> Server<Balancer>: disconnected at <10.18.94.158:35454> from <206.253.180.141:15350>
-Issue END time	024.07.14 20:13:02	Connected	ChasePNS	2024.07.14 20:13:02 [cmmt:1723266:2281699072]Channel #00020 Link<SSL> Port<ChasePNS> Server<Balancer>: connected at <10.18.94.158:54950> to <206.253.180.141:15350> Msg<Standard-VISA> Proto<Transparent> LB<> Group<>
-Issue END time	024.07.14 20:13:02	Connected	ChasePNS	2024.07.14 20:13:02 [cmmt:1654127:3682592512]Channel #00020 Link<SSL> Port<ChasePNS> Server<Balancer>: connected at <10.18.94.157:37882> to <206.253.180.141:15350> Msg<Standard-VISA> Proto<Transparent> LB<> Group<>
-
-
-index=chevron_ist_switch_prod host ="vlcvusepistsl70*" sourcetype=prod_chevron_ist_cmmt* ": disconnected at " OR "connected at"
-| rex field=_raw ".(?<date_time>\d+.\d+.\d+\s\d+:\d+:\d+)"
-| rex field=_raw ".Channel\s(?<channel_id>\S+)" 
-| rex field=_raw ".Port\<(?<port_name>\S+)\>" 
-| rex field=_raw ".(?<dt>\d+\.\d+\.\d+\s\S+)\>" 
-| eval event_type = if(match(_raw, ": disconnected at"),"Issue START time", if(match(_raw,"connected at"),"Issue END time",""))
-| eval Connection = if(match(_raw, ": disconnected at"),"Disconnected", if(match(_raw,"connected at"),"Connected",""))
-| table event_type, date_time, Connection, port_name, _raw
-| sort date_time
-
-
-index=chevron_ist_switch_prod host="vlcvusepistsl70*" sourcetype=prod_chevron_ist_cmmt* ": disconnected at " OR "connected at"
-| rex field=_raw ".(?<date_time>\d{4}\.\d{2}\.\d{2}\s\d{2}:\d{2}:\d{2})"
-| rex field=_raw "Channel\s#(?<channel_id>\d+)"
-| rex field=_raw "Port\<(?<port_name>\S+)\>"
-| eval event_type = if(match(_raw, ": disconnected at"), "Disconnected", if(match(_raw, "connected at"), "Connected", ""))
-| table date_time, event_type, port_name, _raw
-| sort date_time
-| streamstats earliest(date_time) as start_time, latest(date_time) as end_time by event_type
-| where event_type == "Disconnected" OR event_type == "Connected"
-| eval event_type = if(event_type == "Disconnected" AND date_time == start_time, "Issue START time", if(event_type == "Connected" AND date_time == end_time, "Issue END time", ""))
-| table event_type, date_time, port_name, _raw
-
+index=chevron_ist_switch_prod host="vlcvusepistsl70*" sourcetype=prod_chevron_ist_cmmt* ("disconnected at" OR "connected at")
+| rex field=_raw "(?<event_type>disconnected at|connected at)" 
+| rex field=_raw ".(?<date_time>\d+\.\d+\.\d+\s\d+:\d+:\d+)"
+| rex field=_raw "Channel\s#(?<channel_id>\d+)" 
+| rex field=_raw "Port\<(?<port_name>[^>]+)\>" 
+| rex field=_raw "Server\<(?<server_name>[^>]+)\>"
+| rex field=_raw "connected at \<(?<connect_ip>\d+\.\d+\.\d+\.\d+:\d+)\> to \<(?<server_ip>\d+\.\d+\.\d+\.\d+:\d+)\> Msg\<(?<message>[^>]+)\> Proto\<(?<protocol>[^>]+)\> LB\<(?<lb>[^>]+)\> Group\<(?<group>[^>]+)\>"
+| eval date_time_epoch = strptime(date_time, "%Y.%m.%d %H:%M:%S")
+| stats min(date_time_epoch) as min_time max(date_time_epoch) as max_time by event_type
+| eval ISSUE_START_TIME = if(event_type == "disconnected at", strftime(min_time, "%Y.%m.%d %H:%M:%S"), null())
+| eval ISSUE_END_TIME = if(event_type == "connected at", strftime(max_time, "%Y.%m.%d %H:%M:%S"), null())
+| fields - min_time max_time event_type date_time_epoch
