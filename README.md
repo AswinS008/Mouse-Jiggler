@@ -1,1 +1,30 @@
-https://splunk.fnfis.com/en-US/app/paypal_ist_switch/search?q=search%20index%20%3D%20chevron_ist_switch_prod%20host%3Dvlcvus*pwso20*%20sourcetype%3Dprod_chevron_ist_wso2carbon_log%20source%3D%22%2Fdata%2Fwso2%2Fwso2am-3.2.0%2Frepository%2Flogs%2Fwso2carbon.log%22%20(%22%7B%5C%22responseMessage%5C%22%3A%5C%22message%20timeout%5C%22%7D%22)%20OR%20((%22Issuer%20Timeout%22%20OR%20%22Reject%20Message%22%20OR%20%22Issuer%20Down%22%20OR%20%22system%20error%22)%20AND%0A%22OUT_MESSAGE%22%20AND%20%22responseMessage%22%20AND%20(NOT%20hostResponseCode%20OR%20%5C%22hostResponseCode%5C%22%5C%3A%5C%22E*%20OR%20%5C%22hostResponseCode%5C%22%5C%3A%5C%22905))%7C%20rex%20%22responseCode%5C%22%5C%3A(%3F%3Crc%3E%5Cd%2B)%22%7Crex%20%22statusCode%5C%22%5C%3A%5C%22(%3F%3CSC%3E%5Cd%2B)%22%20%7C%20dedup%20UUID%0A%7C%20eval%20date%3Dstrftime(_time%2C%20%22%25Y-%25m-%25d%22)%0A%7Cstats%20count%20by%20rc&display.page.search.mode=smart&dispatch.sample_ratio=1&earliest=-3h&latest=now&display.page.search.tab=statistics&display.general.type=statistics&sid=1721450943.243288_049CED75-97ED-4412-ADFA-9806FA1B083A#
+// ==UserScript==
+// @name         Keep Session Active
+// @namespace    http://tampermonkey.net/
+// @version      0.1
+// @description  Clicks a button every 10 seconds to keep the session active
+// @match        https://splunk.fnfis.com/en-US/app/paypal_ist_switch/search
+// @grant        none
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    // Function to click the button
+    function clickButton() {
+        // Change the selector if needed
+        const button = document.querySelector('button'); // Update this selector to match the actual button
+        if (button) {
+            button.click();
+            console.log('Button clicked');
+        } else {
+            console.log('Button not found');
+        }
+    }
+
+    // Click the button immediately
+    clickButton();
+
+    // Set an interval to click the button every 10 seconds
+    setInterval(clickButton, 10000); // 10000 milliseconds = 10 seconds
+})();
